@@ -1,0 +1,5 @@
+opencv-python
+clip-interrogator
+pillow
+torch
+pandas

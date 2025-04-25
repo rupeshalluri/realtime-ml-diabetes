@@ -1,0 +1,43 @@
+name: ML Pipeline CI/CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install databricks-cli azureml-core
+
+    - name: Configure Databricks CLI
+      run: |
+        databricks configure --token <<EOF
+        ${{ secrets.DATABRICKS_HOST }}
+        ${{ secrets.DATABRICKS_TOKEN }}
+        EOF
+
+    - name: Run Databricks Job
+      run: databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }}
+
+    - name: Build and Push Docker Image
+      run: |
+        docker login <your-acr>.azurecr.io -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}
+        docker build -t <your-acr>.azurecr.io/diabetes-model:latest ./docker
+        docker push <your-acr>.azurecr.io/diabetes-model:latest
+
+    - name: Deploy to AKS
+      run: |
+        az aks get-credentials --resource-group <your-resource-group> --name <your-aks-cluster>
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/service.yaml

@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: diabetes-model
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: diabetes-model
+  template:
+    metadata:
+      labels:
+        app: diabetes-model
+    spec:
+      containers:
+      - name: model
+        image: <your-acr>.azurecr.io/diabetes-model:latest
+        ports:
+        - containerPort: 8000

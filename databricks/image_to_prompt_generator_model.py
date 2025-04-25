@@ -1,3 +1,22 @@
+import subprocess
+import sys
+import os
+
+# Get the current directory of the script
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Construct full path to requirements.txt
+requirements_path = os.path.join(current_dir, "requirements.txt")
+
+# Install packages using pip
+try:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", requirements_path])
+except subprocess.CalledProcessError as e:
+    print("Failed to install requirements:", e)
+    sys.exit(1)
+
+
+
 ## IMPORTING LIBRARIES
 import cv2
 from clip_interrogator import Config, Interrogator

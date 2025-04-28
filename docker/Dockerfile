@@ -1,5 +1,23 @@
 FROM python:3.10-slim
+
+# Set work directory
 WORKDIR /app
-COPY . /app
-RUN pip install --no-cache-dir -r requirements.txt
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Install OS-level dependencies
+RUN apt-get update && apt-get install -y \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    && apt-get clean
+
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+
+# Copy source code
+COPY src/ .
+
+# Default command
+CMD ["python", "image_to_prompt_generator_model.py"]

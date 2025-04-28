@@ -2,4 +2,5 @@ opencv-python
 clip-interrogator
 pillow
 torch
-pandas
+mlflow
+scikit-build

@@ -31,6 +31,18 @@ jobs:
     - name: Run Databricks Job
       run: databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }}
 
+    
+    - name: Wait for Databricks job to complete
+      id: wait_for_job
+      run: |
+          # Poll Databricks for the job status
+          STATUS=$(databricks jobs runs get --run-id ${{ steps.databricks_job.outputs.run_id }} | jq -r .state.life_cycle_state)
+          echo "Job Status: $STATUS"
+          if [[ "$STATUS" != "TERMINATED" ]]; then
+            echo "Job did not terminate successfully. Stopping pipeline."
+            exit 1
+          fi
+
     - name: Build and Push Docker Image
       run: |
         docker login testpractce123.azurecr.io -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}

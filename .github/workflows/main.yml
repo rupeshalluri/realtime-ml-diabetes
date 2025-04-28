@@ -19,7 +19,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install databricks-cli azureml-core
-        pip install -r ./docker/requirements.txt
+        pip install -r /docker/requirements.txt
 
     - name: Configure Databricks CLI
       run: |

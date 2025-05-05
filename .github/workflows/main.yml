@@ -31,39 +31,6 @@ jobs:
 
     - name: Run Databricks Job
       run: databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }}
-
-    - name: Wait for Databricks job to complete
-      id: wait_for_job
-      run: |
-        # Poll Databricks for the job status every 30 seconds until it completes
-        while true; do
-          # Get the current job status
-          STATUS=$(databricks jobs runs get --run-id ${{ env.run_id }} | jq -r .state.life_cycle_state)
-          echo "Job Status: $STATUS"
-          if [[ "$STATUS" == "TERMINATED" || "$STATUS" == "FAILED" || "$STATUS" == "TIMED_OUT" ]]; then
-            echo "Job has completed. Status: $STATUS"
-            break
-          fi
-          echo "Job is still running. Waiting for 30 seconds..."
-          sleep 30
-        done
-
-        # Retrieve logs if the job failed
-        if [[ "$STATUS" == "FAILED" ]]; then
-          echo "Job failed. Retrieving logs..."
-          LOGS=$(databricks jobs runs get-output --run-id ${{ env.run_id }} | jq -r .error.message)
-          echo "Job Logs: $LOGS"
-          exit 1  # Fail the pipeline if the job fails
-        fi
-
-        # Proceed to next steps if the job succeeded
-        if [[ "$STATUS" == "TERMINATED" ]]; then
-          echo "Job completed successfully."
-          # Continue with the next steps, if any
-        fi
-
-    
-
     - name: Build and Push Docker Image
       run: |
         docker login testpractce123.azurecr.io -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}

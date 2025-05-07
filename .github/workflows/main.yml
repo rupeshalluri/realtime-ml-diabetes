@@ -7,7 +7,6 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -19,60 +18,19 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install databricks-cli azureml-core opencv-python
-
-    - name: Install jq and grep
-      run: sudo apt-get update && sudo apt-get install -y jq grep
+        pip install databricks-cli azureml-core
+        pip install opencv-python
+        #pip install --no-cache-dir -r ./docker/requirements.txt
 
     - name: Configure Databricks CLI
       run: |
-        mkdir -p ~/.databricks
-        cat <<EOF > ~/.databricks/config
-[DEFAULT]
-host = ${{ secrets.DATABRICKS_HOST }}
-token = ${{ secrets.DATABRICKS_TOKEN }}
-EOF
+        databricks configure --token <<EOF
+        ${{ secrets.DATABRICKS_HOST }}
+        ${{ secrets.DATABRICKS_TOKEN }}
+        EOF
 
-    - name: Verify Databricks CLI and Auth
-      run: |
-        databricks --version
-        databricks workspace list
-
-    - name: Trigger and Wait for Databricks Job
-      run: |
-        echo "Triggering Databricks job..."
-        RUN_OUTPUT=$(databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }} 2>&1)
-        echo "$RUN_OUTPUT"
-
-        RUN_ID=$(echo "$RUN_OUTPUT" | grep -oP '"run_id":\s*\K[0-9]+')
-
-        if [ -z "$RUN_ID" ]; then
-          echo "Failed to retrieve run_id. Exiting."
-          exit 1
-        fi
-
-        echo "Waiting for Databricks job (run_id=$RUN_ID) to complete..."
-
-        while true; do
-          STATUS=$(databricks runs get --run-id $RUN_ID)
-          LIFE_CYCLE_STATE=$(echo "$STATUS" | grep -oP '"life_cycle_state":\s*"\K[^"]+')
-          RESULT_STATE=$(echo "$STATUS" | grep -oP '"result_state":\s*"\K[^"]+')
-
-          echo "Status: $LIFE_CYCLE_STATE, Result: $RESULT_STATE"
-
-          if [[ "$LIFE_CYCLE_STATE" == "TERMINATED" ]]; then
-            if [[ "$RESULT_STATE" == "SUCCESS" ]]; then
-              echo "Databricks job completed successfully."
-              break
-            else
-              echo "Databricks job failed with result: $RESULT_STATE"
-              exit 1
-            fi
-          fi
-
-          sleep 20
-        done
-
+    - name: Run Databricks Job
+      run: databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }}
     - name: Build and Push Docker Image
       run: |
         docker login testpractce123.azurecr.io -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}
@@ -83,4 +41,4 @@ EOF
       run: |
         az aks get-credentials --resource-group <your-resource-group> --name <your-aks-cluster>
         kubectl apply -f k8s/deployment.yaml
-        kubectl apply -f k8s/service.yaml
+        kubectl apply -f k8s/service.yaml   

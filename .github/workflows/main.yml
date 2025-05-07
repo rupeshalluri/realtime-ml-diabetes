@@ -7,6 +7,7 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -26,25 +27,25 @@ jobs:
     - name: Configure Databricks CLI
       run: |
         mkdir -p ~/.databricks
-        echo "[DEFAULT]" > ~/.databricks/config
-        echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databricks/config
-        echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databricks/config
+        cat <<EOF > ~/.databricks/config
+        [DEFAULT]
+        host = ${{ secrets.DATABRICKS_HOST }}
+        token = ${{ secrets.DATABRICKS_TOKEN }}
+        EOF
 
-    - name: Run and Monitor Databricks Job
+    - name: Run and Wait for Databricks Job
       run: |
-        RUN_OUTPUT=$(databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }} --json)
-        RUN_ID=$(echo $RUN_OUTPUT | jq -r '.run_id')
-        
-        echo "Triggered Databricks Job Run ID: $RUN_ID"
-        
+        RUN_ID=$(databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }} --json | jq -r '.run_id')
+        echo "Waiting for Databricks job (run_id=$RUN_ID) to complete..."
+
         while true; do
           STATUS=$(databricks runs get --run-id $RUN_ID --output)
           LIFE_CYCLE_STATE=$(echo $STATUS | jq -r '.state.life_cycle_state')
           RESULT_STATE=$(echo $STATUS | jq -r '.state.result_state')
-          
-          echo "Job status: $LIFE_CYCLE_STATE, Result: $RESULT_STATE"
-          
-          if [[ "$LIFE_CYCLE_STATE" == "TERMINATED" || "$LIFE_CYCLE_STATE" == "SKIPPED" || "$LIFE_CYCLE_STATE" == "INTERNAL_ERROR" ]]; then
+
+          echo "Status: $LIFE_CYCLE_STATE, Result: $RESULT_STATE"
+
+          if [[ "$LIFE_CYCLE_STATE" == "TERMINATED" ]]; then
             if [[ "$RESULT_STATE" == "SUCCESS" ]]; then
               echo "Databricks job completed successfully."
               break
@@ -53,9 +54,8 @@ jobs:
               exit 1
             fi
           fi
-          
-          echo "Waiting for job to complete..."
-          sleep 30
+
+          sleep 20
         done
 
     - name: Build and Push Docker Image

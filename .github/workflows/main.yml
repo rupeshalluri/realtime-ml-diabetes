@@ -21,8 +21,8 @@ jobs:
       run: |
         pip install databricks-cli azureml-core opencv-python
 
-    - name: Install jq
-      run: sudo apt-get update && sudo apt-get install -y jq
+    - name: Install jq and grep (for parsing)
+      run: sudo apt-get update && sudo apt-get install -y jq grep
 
     - name: Configure Databricks CLI
       run: |
@@ -33,15 +33,25 @@ jobs:
         token = ${{ secrets.DATABRICKS_TOKEN }}
         EOF
 
-    - name: Run and Wait for Databricks Job
+    - name: Run and Wait for Databricks Job (old CLI)
       run: |
-        RUN_ID=$(databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }} --json | jq -r '.run_id')
+        echo "Triggering Databricks job..."
+        RUN_OUTPUT=$(databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }})
+        echo "$RUN_OUTPUT"
+
+        RUN_ID=$(echo "$RUN_OUTPUT" | grep -oP '"run_id":\s*\K[0-9]+')
+
+        if [ -z "$RUN_ID" ]; then
+          echo "Failed to retrieve run_id from Databricks."
+          exit 1
+        fi
+
         echo "Waiting for Databricks job (run_id=$RUN_ID) to complete..."
 
         while true; do
-          STATUS=$(databricks runs get --run-id $RUN_ID --output)
-          LIFE_CYCLE_STATE=$(echo $STATUS | jq -r '.state.life_cycle_state')
-          RESULT_STATE=$(echo $STATUS | jq -r '.state.result_state')
+          STATUS=$(databricks runs get --run-id $RUN_ID)
+          LIFE_CYCLE_STATE=$(echo "$STATUS" | grep -oP '"life_cycle_state":\s*"\K[^"]+')
+          RESULT_STATE=$(echo "$STATUS" | grep -oP '"result_state":\s*"\K[^"]+')
 
           echo "Status: $LIFE_CYCLE_STATE, Result: $RESULT_STATE"
 

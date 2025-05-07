@@ -7,6 +7,7 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -20,15 +21,49 @@ jobs:
       run: |
         pip install databricks-cli azureml-core
         pip install opencv-python
-        #pip install --no-cache-dir -r ./docker/requirements.txt
+        # pip install --no-cache-dir -r ./docker/requirements.txt
+
+    - name: Install jq
+      run: sudo apt-get install -y jq
 
     - name: Configure Databricks CLI
       run: |
-        databricks configure --token <<EOF
-        ${{ secrets.DATABRICKS_HOST }}
-        ${{ secrets.DATABRICKS_TOKEN }}
-        EOF
+        mkdir -p ~/.databricks
+        echo -e "[DEFAULT]\nhost = ${{ secrets.DATABRICKS_HOST }}\ntoken = ${{ secrets.DATABRICKS_TOKEN }}" > ~/.databricks/config
 
-    - name: Run Databricks Job
-      run: databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }}
-    
+    - name: Run Databricks Job and Wait for Completion
+      run: |
+        echo "Starting Databricks Job..."
+        run_id=$(databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }} | jq -r '.run_id')
+        echo "Databricks Job started with run_id: $run_id"
+
+        # Poll until job completes
+        while true; do
+          status=$(databricks runs get --run-id $run_id | jq -r '.state.life_cycle_state')
+          result=$(databricks runs get --run-id $run_id | jq -r '.state.result_state')
+          echo "Status: $status - Result: $result"
+
+          if [[ "$status" == "TERMINATED" ]]; then
+            if [[ "$result" == "SUCCESS" ]]; then
+              echo "Job completed successfully."
+              break
+            else
+              echo "Job failed or was cancelled."
+              exit 1
+            fi
+          fi
+          echo "Job still running...checking again in 30 seconds."
+          sleep 30
+        done
+
+    - name: Build and Push Docker Image
+      run: |
+        docker login testpractce123.azurecr.io -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}
+        docker build -t testpractce123.azurecr.io/diabetes-model:latest ./docker
+        docker push testpractce123.azurecr.io/diabetes-model:latest
+
+    - name: Deploy to AKS
+      run: |
+        az aks get-credentials --resource-group <your-resource-group> --name <your-aks-cluster>
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/service.yaml

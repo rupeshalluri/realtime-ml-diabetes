@@ -7,7 +7,6 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -21,23 +20,27 @@ jobs:
       run: |
         pip install databricks-cli azureml-core
         pip install opencv-python
-        # pip install --no-cache-dir -r ./docker/requirements.txt
-
-    - name: Install jq
-      run: sudo apt-get install -y jq
+        #pip install --no-cache-dir -r ./docker/requirements.txt
 
     - name: Configure Databricks CLI
       run: |
-        mkdir -p ~/.databricks
-        echo -e "[DEFAULT]\nhost = ${{ secrets.DATABRICKS_HOST }}\ntoken = ${{ secrets.DATABRICKS_TOKEN }}" > ~/.databricks/config
+        databricks configure --token <<EOF
+        ${{ secrets.DATABRICKS_HOST }}
+        ${{ secrets.DATABRICKS_TOKEN }}
+        EOF
 
-    - name: Run Databricks Job and Wait for Completion
+    - name: Run Databricks Job
+      id: databricks_job
       run: |
-        echo "Starting Databricks Job..."
         run_id=$(databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }} | jq -r '.run_id')
-        echo "Databricks Job started with run_id: $run_id"
+        echo "Job triggered with run_id: $run_id"
+        echo "::set-output name=run_id::$run_id"
 
-        # Poll until job completes
+    - name: Wait for Databricks Job to Complete
+      run: |
+        run_id=${{ steps.databricks_job.outputs.run_id }}
+        echo "Waiting for job to complete..."
+        
         while true; do
           status=$(databricks runs get --run-id $run_id | jq -r '.state.life_cycle_state')
           result=$(databricks runs get --run-id $run_id | jq -r '.state.result_state')

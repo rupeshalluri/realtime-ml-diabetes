@@ -21,28 +21,33 @@ jobs:
       run: |
         pip install databricks-cli azureml-core opencv-python
 
-    - name: Install jq and grep (for parsing)
+    - name: Install jq and grep
       run: sudo apt-get update && sudo apt-get install -y jq grep
 
     - name: Configure Databricks CLI
       run: |
         mkdir -p ~/.databricks
         cat <<EOF > ~/.databricks/config
-        [DEFAULT]
-        host = ${{ secrets.DATABRICKS_HOST }}
-        token = ${{ secrets.DATABRICKS_TOKEN }}
-        EOF
+[DEFAULT]
+host = ${{ secrets.DATABRICKS_HOST }}
+token = ${{ secrets.DATABRICKS_TOKEN }}
+EOF
 
-    - name: Run and Wait for Databricks Job (old CLI)
+    - name: Verify Databricks CLI and Auth
+      run: |
+        databricks --version
+        databricks workspace list
+
+    - name: Trigger and Wait for Databricks Job
       run: |
         echo "Triggering Databricks job..."
-        RUN_OUTPUT=$(databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }})
+        RUN_OUTPUT=$(databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }} 2>&1)
         echo "$RUN_OUTPUT"
 
         RUN_ID=$(echo "$RUN_OUTPUT" | grep -oP '"run_id":\s*\K[0-9]+')
 
         if [ -z "$RUN_ID" ]; then
-          echo "Failed to retrieve run_id from Databricks."
+          echo "Failed to retrieve run_id. Exiting."
           exit 1
         fi
 

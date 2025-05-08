@@ -1,12 +1,13 @@
-from fastapi import FastAPI
-import joblib
+import mlflow.pyfunc
+from fastapi import FastAPI, Request
 import pandas as pd
 
 app = FastAPI()
-model = joblib.load("model.pkl")
+model = mlflow.pyfunc.load_model("model")
 
-@app.post("/predict/")
-def predict(data: dict):
-    df = pd.DataFrame([data])
-    prediction = model.predict(df)
-    return {"prediction": prediction.tolist()}
+@app.post("/predict")
+async def predict(request: Request):
+    payload = await request.json()
+    inputs = pd.DataFrame(payload["inputs"])
+    predictions = model.predict(inputs)
+    return {"predictions": predictions.tolist()}

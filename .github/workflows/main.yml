@@ -58,3 +58,10 @@ jobs:
           echo "Job still running...checking again in 30 seconds."
           sleep 30
         done
+
+    - name: Download ML Model
+      run: |
+       cd databricks
+       python download_model.py
+
+

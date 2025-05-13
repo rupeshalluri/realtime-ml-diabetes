@@ -21,21 +21,18 @@ jobs:
         pip install databricks-cli azureml-core
         pip install opencv-python
         #pip install --no-cache-dir -r ./docker/requirements.txt
-
     - name: Configure Databricks CLI
       run: |
         databricks configure --token <<EOF
         ${{ secrets.DATABRICKS_HOST }}
         ${{ secrets.DATABRICKS_TOKEN }}
         EOF
-
     - name: Run Databricks Job
       id: databricks_job
       run: |
         run_id=$(databricks jobs run-now --job-id ${{ secrets.DATABRICKS_JOB_ID }} | jq -r '.run_id')
         echo "Job triggered with run_id: $run_id"
         echo "::set-output name=run_id::$run_id"
-
     - name: Wait for Databricks Job to Complete
       run: |
         run_id=${{ steps.databricks_job.outputs.run_id }}
@@ -45,7 +42,6 @@ jobs:
           status=$(databricks runs get --run-id $run_id | jq -r '.state.life_cycle_state')
           result=$(databricks runs get --run-id $run_id | jq -r '.state.result_state')
           echo "Status: $status - Result: $result"
-
           if [[ "$status" == "TERMINATED" ]]; then
             if [[ "$result" == "SUCCESS" ]]; then
               echo "Job completed successfully."
@@ -58,10 +54,3 @@ jobs:
           echo "Job still running...checking again in 30 seconds."
           sleep 30
         done
-
-    - name: Download ML Model
-      run: |
-       cd databricks
-       python download_model.py
-
-

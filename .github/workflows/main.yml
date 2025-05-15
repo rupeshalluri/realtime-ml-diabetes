@@ -25,6 +25,8 @@ jobs:
         pip install databricks-cli azureml-core
         pip install opencv-python
         pip install mlflow
+        pip install mlflow[databricks]
+
         #pip install --no-cache-dir -r ./docker/requirements.txt
     - name: Configure Databricks CLI
       run: |

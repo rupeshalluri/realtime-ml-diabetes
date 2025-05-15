@@ -39,11 +39,6 @@ jobs:
         ${{ secrets.DATABRICKS_HOST }}
         ${{ secrets.DATABRICKS_TOKEN }}
         EOF
-    - name: Download ML Model
-      run: |
-       cd databricks
-       python download_model.py
-    
     - name: Run Databricks Job
       id: databricks_job
       run: |
@@ -72,4 +67,7 @@ jobs:
           sleep 30
         done
 
-        
+    - name: Download ML Model
+      run: |
+       cd databricks
+       python download_model.py    

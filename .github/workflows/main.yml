@@ -27,6 +27,11 @@ jobs:
         ${{ secrets.DATABRICKS_HOST }}
         ${{ secrets.DATABRICKS_TOKEN }}
         EOF
+    - name: Download ML Model
+      run: |
+       cd databricks
+       python download_model.py
+    
     - name: Run Databricks Job
       id: databricks_job
       run: |
@@ -54,3 +59,5 @@ jobs:
           echo "Job still running...checking again in 30 seconds."
           sleep 30
         done
+
+        

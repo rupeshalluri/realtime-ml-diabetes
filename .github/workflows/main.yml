@@ -70,4 +70,10 @@ jobs:
     - name: Download ML Model
       run: |
        cd databricks
-       python download_model.py    
+       python download_model.py  
+
+    - name: Build and Push Docker Image
+      run: |
+        docker build -t testpractce123.azurecr.io/diabetes-model:latest ./docker
+        docker login testpractce123.azurecr.io -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}
+        docker push testpractce123.azurecr.io/diabetes-model:latest   

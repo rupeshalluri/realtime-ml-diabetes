@@ -29,6 +29,7 @@ jobs:
         pip install torch
         pip install clip-interrogator
         pip install scikit-build
+        pip install mlflow-skinny[databricks]
         
 
         #pip install --no-cache-dir -r ./docker/requirements.txt

@@ -1,6 +1,7 @@
 import os
 import mlflow
 from mlflow import MlflowClient
+from mlflow.artifacts import download_artifacts
 
 # Validate environment variables are set
 databricks_host = os.getenv("DATABRICKS_HOST")
@@ -31,5 +32,10 @@ latest_version = max([int(m.version) for m in versions])
 model_uri = f"models:/{uc_model_name}/{latest_version}"
 model = mlflow.pyfunc.load_model(model_uri)
 model.save("model")
+#from mlflow.artifacts import download_artifacts
 
-print(f"Model v{latest_version} downloaded and saved.")
+model_path = download_artifacts(artifact_uri=model_uri, dst_path="model")
+print(f"Model artifacts downloaded to: {model_path}")
+
+
+#print(f"Model v{latest_version} downloaded and saved.")
